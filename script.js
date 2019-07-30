@@ -3,26 +3,23 @@ async function getData() {
     'https://storage.googleapis.com/tfjs-tutorials/carsData.json'
   )
   const carsData = await carsDataReq.json()
-  console.log(carsData)
   const cleaned = carsData
     .map(car => ({
       mpg: car.Miles_per_Gallon,
-      horsePower: car.Horsepower,
+      horsepower: car.Horsepower,
     }))
-    .filter(car => car.mpg !== null && car.horsePower !== null)
+    .filter(car => car.mpg !== null && car.horsepower !== null)
 
   return cleaned
 }
 
 async function run() {
   const data = await getData()
-  console.log(data)
   const values = await data.map(d => ({
-    x: d.horsePower,
+    x: d.horsepower,
     y: d.mpg,
   }))
 
-  console.log(values)
   tfvis.render.scatterplot(
     { name: 'Horsepower v MPG' },
     { values },
@@ -32,6 +29,56 @@ async function run() {
       height: 300,
     }
   )
+
+  const model = createModel()
+  tvfis.show.modelSummary({ name: 'Model Summary' }, model)
+}
+
+function createModel() {
+  const model = tf.sequential()
+  model.add(
+    tf.layers.dense({
+      inputShape: [1],
+      units: 1,
+      useBias: true,
+    })
+  )
+
+  model.add(tf.layers.dense({ units: 1, useBias: true }))
+}
+
+function convertToTensor(data) {
+  return tf.tidy(() => {
+    tf.util.shuffle(data)
+
+    const inputs = data.map(d => d.horsepower)
+    const labels = data.map(d => d.mpg)
+
+    const inputTensor = tf.tensor2d(inputs, [inputs.length, 1])
+    const labelTensor = tf.tensor2d(labels, [labels.length, 1])
+
+    const inputMax = inputTensor.max()
+    const inputMin = inpitTensor.min()
+    const labelMax = labelTensor.max()
+    const labelMin = labelTensor.min()
+
+    const normalizedInputs = inputTensor
+      .sub(inputMin)
+      .div(inputMax.sub(inputMin))
+
+    const normalizedLabels = labelTensor
+      .sub(labelMin)
+      .div(labelMax.sub(labelMin))
+
+    return {
+      inputs: normalizedInputs,
+      labels: normalizedLabels,
+      inputMax,
+      inputMin,
+      labelMax,
+      labelMin,
+    }
+  })
 }
 
 document.addEventListener('DOMContentLoaded', run)
